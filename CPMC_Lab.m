@@ -1,4 +1,4 @@
-function [E_ave,E_err,SS_ave,SS_err, savedFileName]=CPMC_Lab(Lx,Ly,Lz,N_up,N_dn,kx,ky,kz,U,tx,ty,tz,deltau,N_wlk,N_blksteps,N_eqblk,N_blk,itv_modsvd,itv_pc,itv_Em,t_bp,t_pop,suffix)
+function [E_ave,E_err,CC_ave, CC_err,SS_ave,SS_err,savedFileName]=CPMC_Lab(Lx,Ly,Lz,N_up,N_dn,kx,ky,kz,U,tx,ty,tz,tx2,ty2,tz2,deltau,N_wlk,N_blksteps,N_eqblk,N_blk,itv_modsvd,itv_pc,itv_Em,t_bp,t_pop,N_x, N_y,suffix)
 % function [E_ave,E_err,savedFileName]=CPMC_Lab(Lx,Ly,Lz,N_up,N_dn,kx,ky,kz,U,tx,ty,tz,deltau,N_wlk,N_blksteps,N_eqblk,N_blk,itv_modsvd,itv_pc,itv_Em, suffix)
 % Perform a constrained path Monte Carlo calculatiion. Main function in the CPMC-Lab package
 % Input
@@ -40,6 +40,7 @@ function [E_ave,E_err,SS_ave,SS_err, savedFileName]=CPMC_Lab(Lx,Ly,Lz,N_up,N_dn,
 tic; % start the  timer
 initialization; % initialize internal constants, form the trial wave function and assemble the initial population of walkers
 format long;
+
 N=floor(t_bp/N_blksteps);
 flag_mea=0; %determine when a measurement should take place
 flag_begin_bp=0; %determine when a back propagated measurement take place
@@ -47,7 +48,8 @@ flag_bp=0; %determine when the back propagating time ends
 flag_bbp=zeros(N+1,1); %determine if back propagation is being effectuated 
 E=0;
 W=0;
-SS=0;
+S=zeros(N_x*N_y,1);
+C=zeros(N_x*N_y,1);
 % Preallocate arrays:
 E_blk=zeros(N_blk,1); % array to store the energy measured in every block
 W_blk=zeros(N_blk,1); % array to store the total weight in every block
@@ -57,17 +59,19 @@ parents=zeros(N_wlk,N+1);
 B_up=zeros(t_bp+1, N_wlk, N_sites, N+1);
 B_dn=zeros(t_bp+1, N_wlk, N_sites, N+1);
 % Estimate how many back propagations are possible for the total proyection time
-SS_blk=zeros(N_blk-N-1,1);
+S_blk=zeros(N_blk-N-1,N_x*N_y);
+C_blk=zeros(N_blk-N-1,N_x*N_y);
 W_bp=zeros(N_blk-N-1,1);
 % Measurement related parameters
 ind_measure=0;
 ind_parents=0;
 ind_end=0;
 list=zeros(N+1,1);
+display(N+1);
 %% Equilibration phase
 for i_blk=1:N_eqblk
     for j_step=1:N_blksteps
-        [Phi, Phi_old, B_up, B_dn, parents, w, O, SS, E, W, W_bp] = stepwlk(Phi, Phi_old, B_up, B_dn, parents, N_wlk, N_sites, N, w, O, SS, E, W, W_bp, H_k, Proj_k_half, flag_mea, flag_begin_bp, flag_bp, flag_bbp, Phi_T, N_up, N_par, t_bp, t_pop, U, fac_norm, aux_fld, ind_parents, ind_end, list);
+        [Phi, Phi_old, B_up, B_dn, parents, w, O, S, C, E, W, W_bp] = stepwlk(Phi, Phi_old, B_up, B_dn, parents, N_wlk, N_sites, N, w, O, S, C, CC, SS, Sz, LL, E, W, W_bp, H_k, Proj_k_half, flag_mea, flag_begin_bp, flag_bp, flag_bbp, Phi_T, N_up, N_par, t_bp, t_pop, U, Lx, Ly, fac_norm, aux_fld, ind_parents, ind_end, list, N_x, N_y);
         if mod(j_step,itv_modsvd)==0
             [Phi, O] = stblz(Phi, N_wlk, O, N_up, N_par); % re-orthonormalize the walkers
         end
@@ -78,6 +82,7 @@ for i_blk=1:N_eqblk
 end
 
 %% Measurement phase 
+plot_g=zeros(N_blk*N_blksteps,10);
 for i_blk=1:N_blk
     for j_step=1:N_blksteps
         t=(i_blk-1)*N_blksteps+j_step;
@@ -108,11 +113,11 @@ for i_blk=1:N_blk
                 list(ii)=0;
             end
         end
-        % propagate the walkers
+        % propagate the walker
         if ind_measure>0
-            [Phi, Phi_old, B_up, B_dn, parents, w, O, SS_blk(ind_measure), E_blk(i_blk), W_blk(i_blk), W_bp(ind_measure)] = stepwlk(Phi, Phi_old, B_up, B_dn, parents, N_wlk, N_sites, N, w, O, SS_blk(ind_measure), E_blk(i_blk), W_blk(i_blk), W_bp(ind_measure), H_k, Proj_k_half, flag_mea, flag_begin_bp, flag_bp, flag_bbp, Phi_T, N_up, N_par, t_bp, t_pop, U, fac_norm, aux_fld, ind_parents+1, ind_end+1, list);
+            [Phi, Phi_old, B_up, B_dn, parents, w, O, S_blk(ind_measure,:), C_blk(ind_measure,:), E_blk(i_blk), W_blk(i_blk), W_bp(ind_measure)] = stepwlk(Phi, Phi_old, B_up, B_dn, parents, N_wlk, N_sites, N, w, O, S_blk(ind_measure,:), C_blk(ind_measure,:), E_blk(i_blk), W_blk(i_blk), W_bp(ind_measure), H_k, Proj_k_half, flag_mea, flag_begin_bp, flag_bp, flag_bbp, Phi_T, N_up, N_par, t_bp, t_pop, U, Lx, Ly, fac_norm, aux_fld, ind_parents+1, ind_end+1, list, N_x, N_y);
         else
-            [Phi, Phi_old, B_up, B_dn, parents, w, O, SS, E_blk(i_blk), W_blk(i_blk), W] = stepwlk(Phi, Phi_old, B_up, B_dn, parents, N_wlk, N_sites, N, w, O, SS, E_blk(i_blk), W_blk(i_blk), W, H_k, Proj_k_half, flag_mea, flag_begin_bp, flag_bp, flag_bbp, Phi_T, N_up, N_par, t_bp, t_pop, U, fac_norm, aux_fld, ind_parents+1, ind_end+1, list);
+            [Phi, Phi_old, B_up, B_dn, parents, w, O, S, C, E_blk(i_blk), W_blk(i_blk), W] = stepwlk(Phi, Phi_old, B_up, B_dn, parents, N_wlk, N_sites, N, w, O, S, C, E_blk(i_blk), W_blk(i_blk), W, H_k, Proj_k_half, flag_mea, flag_begin_bp, flag_bp, flag_bbp, Phi_T, N_up, N_par, t_bp, t_pop, U, Lx, Ly, fac_norm, aux_fld, ind_parents+1, ind_end+1, list, N_x, N_y);
         end
         if mod(j_step,itv_modsvd)==0
             [Phi, O] = stblz(Phi, N_wlk, O, N_up, N_par); % re-orthonormalize the walkers
@@ -125,23 +130,27 @@ for i_blk=1:N_blk
             fac_norm=(real(E_blk(i_blk)/W_blk(i_blk))-0.5*U*N_par)*deltau;
         end
         if flag_bp==1
-            flag_bbp(ind_end+1)=0;
+            flag_bbp(ind_end+1)=0;    
         end
     end
     E_blk(i_blk)=E_blk(i_blk)/W_blk(i_blk);
     if ind_measure>0        
-        SS_blk(ind_measure)=SS_blk(ind_measure)/W_bp(ind_measure);
-        display(strcat('E_pot(',int2str(ind_measure),')=',num2str(real(SS_blk(ind_measure)))))
+       S_blk(ind_measure,:)=S_blk(ind_measure,:)/W_bp(ind_measure);
+       C_blk(ind_measure,:)=C_blk(ind_measure,:)/W_bp(ind_measure);
     end
     display(strcat('E(',int2str(i_blk),')=',num2str(real(E_blk(i_blk)))))
 end
+
 %% Results
 E=real(E_blk);
 E_ave=mean(E)
 E_err=std(E)/sqrt(N_blk)
-SS=real(SS_blk);
-SS_ave=mean(SS)
-SS_err=std(SS)/sqrt(N_blk)
+S=real(S_blk);
+S_ave=mean(S)
+S_err=std(S)/sqrt(N_blk)
+C=real(C_blk);
+C_ave=mean(C)
+C_err=std(C)/sqrt(N_blk)
 % The total computational time:
 time=toc() % stops the timer
 %% Save data to a *.mat file
@@ -149,6 +158,7 @@ save (savedFileName, 'E', 'E_ave', 'E_err', 'time');
 save (savedFileName, '-append', 'Lx', 'Ly','Lz', 'N_up', 'N_dn', 'kx', 'ky','kz', 'U', 'tx', 'ty','tz');
 save (savedFileName, '-append', 'deltau', 'N_wlk', 'N_blksteps', 'N_eqblk', 'N_blk', 'itv_pc','itv_modsvd','itv_Em');
 save (savedFileName, '-append', 'H_k', 'Phi_T');
+save (savedFileName, '-append', 'S_ave', 'C_ave');
 
 %% Explanation of saved quantities:
 % E: the array of energy of each block

@@ -15,9 +15,10 @@ validation;
 N_sites=Lx*Ly*Lz;
 N_par=N_up+N_dn;
 % form the one-body kinetic Hamiltonian
-H_k=H_K(Lx, Ly, Lz, kx, ky, kz, tx, ty, tz);
+H_k=H_K(Lx, Ly, Lz, kx, ky, kz, tx, ty, tz, tx2, ty2, tz2);
 % the matrix of the operator exp(-deltau*K/2)
 Proj_k_half = expm(-0.5*deltau*H_k); 
+
 %% Initialize the trial wave function and calculate the ensemble's initial energy 
 % Diagonalize the one-body kinetic Hamiltonian to get the non-interacting single-particle orbitals:
 [psi_nonint,E_nonint_m] = eig(H_k);

@@ -26,7 +26,6 @@ function [phi, w, O, invO_matrix_up, invO_matrix_dn] = halfK(phi, w, O, Proj_k_h
 
     %% propagate the walker by exp(-deltau*K/2)
     phi=Proj_k_half*phi;
-
     %% update the inverse of the overlap
     invO_matrix_up=inv(Phi_T(:,1:N_up)'*phi(:,1:N_up));
     invO_matrix_dn=inv(Phi_T(:,N_up+1:N_par)'*phi(:,N_up+1:N_par));

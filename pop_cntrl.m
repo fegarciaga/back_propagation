@@ -27,6 +27,7 @@ function [Phi, w, O, B_up, B_dn, parents]=pop_cntrl(Phi, w, O, B_up, B_dn, paren
     new_O=zeros(N_wlk,1);
     new_B_up=zeros(t_bp+1, N_wlk, N_sites,N+1);
     new_B_dn=zeros(t_bp+1, N_wlk, N_sites,N+1);
+    new_parents=zeros(N_wlk,N+1);
     % scaling factor to bring the current total weight back to the original
     % level (=N_wlk)
     d=N_wlk/sum(w);
@@ -44,9 +45,9 @@ function [Phi, w, O, B_up, B_dn, parents]=pop_cntrl(Phi, w, O, B_up, B_dn, paren
             % for copied determinants, the ancestral path is actualized aswell as the corresponding father
             for i=1:N+1
                 if flag_bbp(i)==1
-                    new_B_up(:,j,:,i)=B_up(:,parents(i_wlk, i),:,i);
-                    new_B_dn(:,j,:,i)=B_dn(:,parents(i_wlk, i),:,i);
-                    parents(j,i)=parents(i_wlk,i);
+                    new_B_up(:,j,:,i)=B_up(:,i_wlk,:,i);
+                    new_B_dn(:,j,:,i)=B_dn(:,i_wlk,:,i);
+                    new_parents(j,i)=parents(i_wlk,i);
                 end
             end
         end
@@ -60,5 +61,5 @@ function [Phi, w, O, B_up, B_dn, parents]=pop_cntrl(Phi, w, O, B_up, B_dn, paren
     w=ones(N_wlk,1);
     B_up=new_B_up;
     B_dn=new_B_dn;
+    parents=new_parents;
 end
-    

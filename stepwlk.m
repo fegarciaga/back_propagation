@@ -1,5 +1,4 @@
-function [phi, phi_old, B_up, B_dn, parents, w, O, Obs, E, W, W_bp] = stepwlk(phi, phi_old, B_up, B_dn, parents, N_wlk, N_sites, N, w, O, Obs, E, W, W_bp, H_k, Proj_k_half, flag_mea, flag_begin_bp, flag_bp, flag_bbp, Phi_T, N_up, N_par, t_bp, t_pop, U, fac_norm, aux_fld, ind_parents, ind_end, list)
-                                                                                                                                                                                                              
+function [phi, phi_old, B_up, B_dn, parents, w, O, S_blk, C_blk, E, W, W_bp] = stepwlk(phi, phi_old, B_up, B_dn, parents, N_wlk, N_sites, N, w, O, S_blk, C_blk, E, W, W_bp, H_k, Proj_k_half, flag_mea, flag_begin_bp, flag_bp, flag_bbp, Phi_T, N_up, N_par, t_bp, t_pop, U, Lx, Ly, fac_norm, aux_fld, ind_parents, ind_end, list, N_x, N_y)
     % function [phi, w, O, E, W] = stepwlk(phi, N_wlk, N_sites, w, O, E, W, H_k, Proj_k_half, flag_mea, Phi_T, N_up, N_par, U, fac_norm, aux_fld)
     % Perform one step of the random walk
     % Inputs:
@@ -38,7 +37,8 @@ function [phi, phi_old, B_up, B_dn, parents, w, O, Obs, E, W, W_bp] = stepwlk(ph
 
     %% Propagate each walker:
     e=zeros(N_wlk,1); % Array containing the energy of each walker
-    obs=zeros(N_wlk,1); % Array containing a given operator
+    s=zeros(N_wlk,N_x*N_y);
+    c=zeros(N_wlk,N_x*N_y);
     
      % stores population at a given time for future back propagation measurement
     if flag_begin_bp==1
@@ -50,8 +50,8 @@ function [phi, phi_old, B_up, B_dn, parents, w, O, Obs, E, W, W_bp] = stepwlk(ph
             parents(i_wlk,ind_parents)=i_wlk;
         end
         if w(i_wlk)>0
-             % multiply by the pre-factor exp(-deltau*(E_T)) in the ground-state projector 
-             % and by the prefactor exp(-0.5*U*(N_up+N_dn)) in the Hirsch transformation
+            % multiply by the pre-factor exp(-deltau*(E_T)) in the ground-state projector 
+            % and by the prefactor exp(-0.5*U*(N_up+N_dn)) in the Hirsch transformation
             w(i_wlk)=w(i_wlk)*exp(fac_norm);
             % propagate by the kinetic term exp(-1/2*deltau*K)
             [Phi, w(i_wlk), O(i_wlk), invO_matrix_up, invO_matrix_dn]=halfK(Phi, w(i_wlk), O(i_wlk), Proj_k_half, Phi_T, N_up, N_par);
@@ -75,14 +75,14 @@ function [phi, phi_old, B_up, B_dn, parents, w, O, Obs, E, W, W_bp] = stepwlk(ph
                     if flag_bp==1
                         % Selects right father
                         i_father=parents(i_wlk, ind_end);
-                        [obs(i_wlk)]=measure_bp(Phi_T, phi_old(:,:,i_father,ind_end), B_up(:,i_wlk,:, ind_end), B_dn(:,i_wlk,:, ind_end), Proj_k_half, t_bp, t_pop, N_up, N_par, N_sites, U);
+                        [s(i_wlk,:), c(i_wlk,:)]=measure_bp(Phi_T, phi_old(:,:,i_father,ind_end), B_up(:,i_wlk,:, ind_end), B_dn(:,i_wlk,:, ind_end), Proj_k_half, t_bp, t_pop, N_up, N_par, N_sites, Lx, Ly, N_x, N_y);
                     end
                 end
             end
         end
         phi(:,:,i_wlk)=Phi;
     end
-
+    
     %% Compute the ensemble's total energy and weight if measurement took place
     if flag_mea==1
         for i_wlk=1:N_wlk
@@ -96,11 +96,13 @@ function [phi, phi_old, B_up, B_dn, parents, w, O, Obs, E, W, W_bp] = stepwlk(ph
     if flag_bp==1
         for i_wlk=1:N_wlk
             if w(i_wlk)>0
-                Obs=Obs+obs(i_wlk)*w(i_wlk);
+                S_blk=S_blk+s(i_wlk,:)*w(i_wlk);
+                C_blk=C_blk+c(i_wlk,:)*w(i_wlk);
                 W_bp=W_bp+w(i_wlk);
             end
         end
         B_up(:,:,:,ind_end)=0;
         B_dn(:,:,:,ind_end)=0;
+        phi_old(:,:,:,ind_end)=0;
     end
 end
